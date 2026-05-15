@@ -4,6 +4,7 @@ import path from 'path';
 
 const UPLOAD_DIR = 'C:\\Cw\\s3bucket';
 const MAX_FILE_SIZE = 300 * 1024 * 1024; // 300MB
+const UPLOADED_BY = 'user@example.com'; // TODO: Replace with actual user authentication
 
 const ALLOWED_EXTENSIONS = new Set([
   'docx', 'xlsx', 'pptx', 'pdf', 'csv', 'txt', 'xml',
@@ -116,11 +117,21 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      // Use original filename with collision handling
-      let finalPath = path.join(UPLOAD_DIR, file.name);
+      // Build filename: email,datetime,originalname
+      const now = new Date();
+      const datetime = now.getFullYear().toString() +
+        String(now.getMonth() + 1).padStart(2, '0') +
+        String(now.getDate()).padStart(2, '0') +
+        String(now.getHours()).padStart(2, '0') +
+        String(now.getMinutes()).padStart(2, '0') +
+        String(now.getSeconds()).padStart(2, '0');
+      const renamedFile = `${UPLOADED_BY},${datetime},${file.name}`;
+
+      // Collision handling
+      let finalPath = path.join(UPLOAD_DIR, renamedFile);
       let counter = 1;
       while (fs.existsSync(finalPath)) {
-        const nameParts = file.name.split('.');
+        const nameParts = renamedFile.split('.');
         const fileExt = nameParts.pop();
         const baseName = nameParts.join('.');
         finalPath = path.join(UPLOAD_DIR, `${baseName}_${counter}.${fileExt}`);
